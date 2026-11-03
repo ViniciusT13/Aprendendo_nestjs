@@ -1,20 +1,23 @@
-import { CallHandler, ExecutionContext, NestInterceptor } from '@nestjs/common';
-import { Observable, tap } from 'rxjs';
+import {
+  BadRequestException,
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
+import { catchError, throwError } from 'rxjs';
 
-export class TimingconnectionInterceptor implements NestInterceptor {
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler<any>,
-  ): Observable<any> | Promise<Observable<any>> {
-    const startTime = Date.now();
-
+@Injectable()
+export class ErrorHandlingInterceptor implements NestInterceptor {
+  async intercept(context: ExecutionContext, next: CallHandler<any>) {
     return next.handle().pipe(
-      tap(() => {
-        const finalTime = Date.now();
-        const elapsedTime = finalTime - startTime;
-        console.log(
-          `TimingconnectionInterceptor: levou ${elapsedTime} ms para executar`,
-        );
+      catchError((error) => {
+        return throwError(() => {
+          if (error.name === 'NotFoundException') {
+            return new BadRequestException(error.message);
+          }
+          return new BadRequestException('Ocorreu um erro desconhecido');
+        });
       }),
     );
   }
